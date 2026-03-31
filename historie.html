@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>📋 Spiele-Historie</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+      background: #0a0a1a; color: #fff;
+      min-height: 100vh; padding: 24px 16px 40px;
+      display: flex; flex-direction: column; align-items: center;
+    }
+
+    /* NAV */
+    .nav-btn {
+      position: fixed; top: 20px; left: 16px;
+      background: #1e1e30; border: 1px solid #2a2a3a;
+      color: #aaa; font-size: 12px; font-weight: 600;
+      padding: 8px 14px; border-radius: 20px; cursor: pointer;
+      z-index: 50; text-decoration: none;
+    }
+    .nav-btn:active { opacity: 0.7; }
+
+    .page-header { text-align: center; margin-bottom: 28px; margin-top: 10px; }
+    .page-header h1 { font-size: 24px; font-weight: 800; }
+    .page-header p { font-size: 12px; color: #444; margin-top: 4px; letter-spacing: 1px; text-transform: uppercase; }
+
+    /* STATS OVERVIEW */
+    .stats-row {
+      display: flex; gap: 10px; width: 100%; max-width: 380px; margin-bottom: 20px;
+    }
+    .stat-box {
+      flex: 1; background: #13131f; border: 1px solid #1e1e30;
+      border-radius: 16px; padding: 14px 10px; text-align: center;
+    }
+    .stat-box .val { font-size: 30px; font-weight: 900; color: #aad400; }
+    .stat-box .lbl { font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+
+    /* SPIEL KARTE */
+    .game-list { width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 12px; }
+
+    .game-card {
+      background: #13131f; border: 1px solid #1e1e30;
+      border-radius: 18px; padding: 18px;
+      position: relative; overflow: hidden;
+    }
+
+    .game-card-header {
+      display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px;
+    }
+    .game-name { font-size: 15px; font-weight: 700; color: #fff; }
+    .game-date { font-size: 11px; color: #555; margin-top: 2px; }
+    .delete-btn {
+      background: none; border: none; color: #333; font-size: 18px;
+      cursor: pointer; padding: 0 0 0 10px; line-height: 1;
+    }
+    .delete-btn:active { color: #e05555; }
+
+    .game-score-row {
+      display: flex; align-items: center; justify-content: center;
+      gap: 12px; margin-bottom: 14px;
+    }
+    .game-team { text-align: center; flex: 1; }
+    .game-team-name { font-size: 12px; color: #666; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .game-team-score { font-size: 42px; font-weight: 900; line-height: 1; }
+    .game-vs { font-size: 16px; color: #2a2a3a; font-weight: 700; flex-shrink: 0; }
+
+    .game-player-row {
+      background: #0f1a06; border: 1px solid #1a2a08;
+      border-radius: 12px; padding: 10px 14px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .game-player-info .pname { font-size: 13px; font-weight: 700; color: #aad400; }
+    .game-player-info .psub { font-size: 11px; color: #4a5a20; }
+    .game-player-stats { display: flex; gap: 16px; }
+    .game-player-stat { text-align: center; }
+    .game-player-stat .sv { font-size: 18px; font-weight: 800; color: #aad400; }
+    .game-player-stat .sl { font-size: 10px; color: #4a5a20; text-transform: uppercase; }
+
+    /* LEER */
+    .empty-state {
+      text-align: center; padding: 60px 20px; color: #333;
+    }
+    .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+    .empty-state p { font-size: 14px; line-height: 1.6; }
+
+    /* LÖSCHEN ALLE */
+    .btn-clear-all {
+      width: 100%; max-width: 380px; margin-top: 20px;
+      background: #1e1e30; color: #e05555; border: 1px solid #2e1e1e;
+      border-radius: 14px; padding: 14px; font-size: 14px; font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-clear-all:active { opacity: 0.7; }
+
+    /* MODAL */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.75); z-index: 100;
+      align-items: flex-end; justify-content: center;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal { background: #13131f; border-radius: 22px 22px 0 0; padding: 30px 20px; width: 100%; max-width: 420px; }
+    .modal h3 { font-size: 17px; color: #fff; margin-bottom: 8px; }
+    .modal p { font-size: 13px; color: #666; margin-bottom: 18px; }
+    .modal-btns { display: flex; gap: 10px; }
+    .modal-btns .btn { flex: 1; padding: 14px; border: none; border-radius: 13px; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .modal-cancel { background: #1e1e30; color: #aaa; }
+    .modal-danger { background: #e05555; color: #fff; }
+  </style>
+</head>
+<body>
+
+<a class="nav-btn" href="index.html">← Tracker</a>
+
+<div class="page-header">
+  <h1>📋 Spiele-Historie</h1>
+  <p>Alle gespeicherten Spiele</p>
+</div>
+
+<!-- GESAMT-STATS -->
+<div class="stats-row" id="statsRow" style="display:none;">
+  <div class="stat-box">
+    <div class="val" id="statSpiele">0</div>
+    <div class="lbl">Spiele</div>
+  </div>
+  <div class="stat-box">
+    <div class="val" id="statTore">0</div>
+    <div class="lbl">Spieler-Tore</div>
+  </div>
+  <div class="stat-box">
+    <div class="val" id="statZeit">0'</div>
+    <div class="lbl">Ø Spielzeit</div>
+  </div>
+</div>
+
+<!-- SPIELE LISTE -->
+<div class="game-list" id="gameList"></div>
+
+<!-- ALLE LÖSCHEN -->
+<button class="btn-clear-all" id="clearAllBtn" style="display:none;" onclick="openClearAll()">🗑 Alle Spiele löschen</button>
+
+<!-- LÖSCHEN MODAL -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal">
+    <h3 id="deleteTitle">Spiel löschen?</h3>
+    <p id="deleteText">Dieser Eintrag wird dauerhaft gelöscht.</p>
+    <div class="modal-btns">
+      <button class="btn modal-cancel" onclick="closeDeleteModal()">Abbrechen</button>
+      <button class="btn modal-danger" onclick="confirmDelete()">Löschen</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let deleteTarget = null; // 'all' oder ID
+
+  function loadHist() {
+    try {
+      const raw = localStorage.getItem('spiele_historie');
+      return raw ? JSON.parse(raw) : [];
+    } catch(e) { return []; }
+  }
+
+  function saveHist(liste) {
+    localStorage.setItem('spiele_historie', JSON.stringify(liste));
+  }
+
+  function render() {
+    const liste = loadHist();
+    const gameList = document.getElementById('gameList');
+    const statsRow = document.getElementById('statsRow');
+    const clearBtn = document.getElementById('clearAllBtn');
+
+    if (liste.length === 0) {
+      statsRow.style.display = 'none';
+      clearBtn.style.display = 'none';
+      gameList.innerHTML = `
+        <div class="empty-state">
+          <div class="icon">📭</div>
+          <p>Noch keine Spiele gespeichert.<br>Tracke dein erstes Spiel und drücke „Spiel speichern".</p>
+        </div>`;
+      return;
+    }
+
+    // STATS
+    statsRow.style.display = 'flex';
+    clearBtn.style.display = 'block';
+    const totalTore = liste.reduce((s, g) => s + (g.playerGoals || 0), 0);
+    const totalSecs = liste.reduce((s, g) => {
+      const parts = (g.spielzeit || '00:00').split(':');
+      return s + parseInt(parts[0]) * 60 + parseInt(parts[1]);
+    }, 0);
+    const avgMin = liste.length > 0 ? Math.round(totalSecs / liste.length / 60) : 0;
+    document.getElementById('statSpiele').textContent = liste.length;
+    document.getElementById('statTore').textContent = totalTore;
+    document.getElementById('statZeit').textContent = avgMin + "'";
+
+    // KARTEN
+    gameList.innerHTML = liste.map(g => `
+      <div class="game-card">
+        <div class="game-card-header">
+          <div>
+            <div class="game-name">${esc(g.name)}</div>
+            <div class="game-date">${g.datum} · ${g.uhrzeit} Uhr</div>
+          </div>
+          <button class="delete-btn" onclick="openDelete(${g.id})">✕</button>
+        </div>
+
+        <div class="game-score-row">
+          <div class="game-team">
+            <div class="game-team-name">${esc(g.heim)}</div>
+            <div class="game-team-score">${g.scoreHeim}</div>
+          </div>
+          <div class="game-vs">:</div>
+          <div class="game-team">
+            <div class="game-team-name">${esc(g.gast)}</div>
+            <div class="game-team-score">${g.scoreGast}</div>
+          </div>
+        </div>
+
+        <div class="game-player-row">
+          <div class="game-player-info">
+            <div class="pname">${esc(g.playerName)}</div>
+            <div class="psub">Spieler-Stats</div>
+          </div>
+          <div class="game-player-stats">
+            <div class="game-player-stat">
+              <div class="sv">⚽ ${g.playerGoals}</div>
+              <div class="sl">Tore</div>
+            </div>
+            <div class="game-player-stat">
+              <div class="sv">⏱ ${g.spielzeit}</div>
+              <div class="sl">Spielzeit</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function esc(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // LÖSCHEN EINZELN
+  function openDelete(id) {
+    deleteTarget = id;
+    document.getElementById('deleteTitle').textContent = 'Spiel löschen?';
+    document.getElementById('deleteText').textContent = 'Dieser Eintrag wird dauerhaft gelöscht.';
+    document.getElementById('deleteModal').classList.add('show');
+  }
+
+  // LÖSCHEN ALLE
+  function openClearAll() {
+    deleteTarget = 'all';
+    document.getElementById('deleteTitle').textContent = 'Alle Spiele löschen?';
+    document.getElementById('deleteText').textContent = 'Die gesamte Historie wird dauerhaft gelöscht.';
+    document.getElementById('deleteModal').classList.add('show');
+  }
+
+  function closeDeleteModal() {
+    document.getElementById('deleteModal').classList.remove('show');
+    deleteTarget = null;
+  }
+
+  function confirmDelete() {
+    if (deleteTarget === 'all') {
+      localStorage.removeItem('spiele_historie');
+    } else {
+      const liste = loadHist().filter(g => g.id !== deleteTarget);
+      saveHist(liste);
+    }
+    closeDeleteModal();
+    render();
+  }
+
+  document.getElementById('deleteModal').addEventListener('click', function(e) {
+    if (e.target === this) closeDeleteModal();
+  });
+
+  render();
+</script>
+</body>
+</html>
